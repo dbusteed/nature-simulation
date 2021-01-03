@@ -70,3 +70,50 @@ There are a number of constants defined at the beginning of the file, as well as
 ## Notes
 
 I've only tested this on Ubuntu Linux. I imagine this should work on MacOS because it also uses bash/zsh. I plan on testing it on Windows at some point
+
+## TODO
+
+pre-built maps
+- river dividing stuff
+
+print less often?
+
+bug with the exponential growth?
+- trying to replicate
+- maybe die with over-population
+  - how to track? 
+  - if at any point completely surrounded => base_lifespan--
+
+resources
+
+search for mates
+
+tribes
+- disputes
+- benefits of tribes
+  - maybe allegiance has a positve relationship with base_lifespan
+
+change 'animal' to nomad
+
+tribes base
+- add 'home' attr to animal
+- if r = 10 make house, set home to that pos
+- if stumbles into a tribe hut, set it as home
+
+but what to the huts do?
+
+rethink tribes
+[x] maybe everyone is neutral,
+[x] then someone makes a hut, 
+[x] and when that person runs into others they share deets about the hut
+[x] and they join the tribe.
+[ ] they stay around the hut to give it resources.
+[ ] external list of huts mapped to tribes for keeping track
+[ ] what if tribes go extinct?
+[ ] allegiances grow somehow?
+[ ] tribes passed thru birth
+[ ] 
+
+- at some limit, won't interbreed
+- A3 B1 --> A2 B0
+- A5 A5 --> A6 A6
