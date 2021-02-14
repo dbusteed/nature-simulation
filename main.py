@@ -18,10 +18,6 @@ from importlib import import_module
 #                      #
 #----------------------#
 
-# make nomads white, so they can change colors when
-# joining tribes. make resources some other color to distinguish
-# against white aniuamsl
-
 # colors for printing to the console.
 # replace these with blank strings
 # to disable color support (but make
@@ -34,7 +30,7 @@ BG_RED = '\033[41m'
 BG_CYAN = '\033[46m'
 BG_MAGENTA = '\033[45m'
 BG_YELLOW = '\033[43m'
-FG_WHITE = '\033[0m'
+FG_WHITE = '\033[1m'
 FG_RED = '\033[1;31m'
 FG_YELLOW = '\033[1;33m'
 FG_MAGENTA = '\033[1;35m'
@@ -45,7 +41,6 @@ NC = '\033[0m'
 WATER_TILE = f'{BG_BLUE} {NC}'
 PLANT_TILE = f'{BG_GREEN} {NC}'
 OPEN_TILE = " "
-RESOURCE_TILE = f"{FG_WHITE}.{NC}"
 
 # grid / world dimensions
 WORLD_X = 30
@@ -70,15 +65,15 @@ REPRODUCTION_CHANCE_DECREASE = 0.05
 GESTATION = 30
 BASE_SENSE = 4     # starting sense value for nomads   
 BASE_STAMINA = 30  # starting stamina value for nomads
+BASE_TRIBAL = 5
 
 # plant stuff
 #  - how often plants regrow (1 out of X times)
 #  - how many plants regrow each time
 #  - limit for how many plants grow in the world
 #    
-PLANT_GROWTH_RATE = 10
-PLANT_GROWTH_AMT = 5
-RESOURCE_GROWTH_AMT = 10
+PLANT_GROWTH_RATE = 8
+PLANT_GROWTH_AMT = 10
 MAX_PLANT_PCT = .30
 
 # output stuff
@@ -99,7 +94,9 @@ MAP_DIR = "maps"
 # generated. To specfiy other maps, set MAP to 
 # a string of a filename found in the maps directory.
 # Example: for maps/river.py, set MAP to "river"
-MAP = "lake"
+MAP = "river"
+
+DEBUG = False
 
 
 #-----------------#
@@ -110,7 +107,7 @@ MAP = "lake"
 
 class Nomad:
     
-    def __init__(self, pos, tob=0, sense=BASE_SENSE, stamina=BASE_STAMINA, tribe='none', allegiance=0):    
+    def __init__(self, pos, tob=0, sense=BASE_SENSE, stamina=BASE_STAMINA, tribal=BASE_TRIBAL, tribe=None, allegiance=0):    
         
         # attributes for basic actions
         self.pos = pos
@@ -118,9 +115,8 @@ class Nomad:
         self.hunger = 0
         self.target = None
         self.goal = 'drink'
-        self.home = None
         self.tribes = {
-            'none': FG_WHITE,
+            None: FG_WHITE,
             'red': FG_RED,
             'cyan': FG_CYAN,
             'magenta': FG_MAGENTA,
@@ -136,15 +132,13 @@ class Nomad:
         self.tribe = tribe
         self.goals = {
             'eat': PLANT_TILE,
-            'drink': WATER_TILE,
-            'go_to_hut': f'{self.areas[self.tribe]}#{NC}'
+            'drink': WATER_TILE
         }
 
         # tribe stuff
         self.allegiance = allegiance
 
-        self.resources = 0
-        self.power = 0
+        self.tribal = tribal
         
         # Time Of Birth, and somewhat random 
         # age of adulthood
@@ -163,7 +157,7 @@ class Nomad:
         # with a trade-off
         #
         self.fatigue = 1
-        base_lifespan = 800 + (min(self.allegiance, 10) * 10)
+        base_lifespan = 800 + (self.allegiance * 10)
 
         # self.fatigue = sense // 2
         # base_lifespan = int((-10 * stamina) + 1300)
@@ -192,7 +186,7 @@ class Nomad:
     def tick(self, t):
 
         # status object for returning to the main process
-        status = {'dead': False, 'offspring': None, 'tribe': None, 'resources': None}
+        status = {'dead': False, 'offspring': None}
 
         # the nomad grows up if they reach their adult_age
         if (t - self.tob) == self.adult_age:
@@ -231,84 +225,74 @@ class Nomad:
                         # to the tribe
                         father = [a[1] for a in anis if a[1].marker.endswith(f"M{NC}")][0]
 
-                        # if self.tribe == 'none' and father.tribe == 'none':
-                        #     random_tribe = choice(list(self.tribes.keys())[1:])
-                        #     self.tribe = random_tribe
-                        #     self.allegiance = 1
-                        #     father.tribe = random_tribe
-                        #     father.marker = f'{self.tribes[self.tribe]}M{NC}'
-                        #     father.allegiance = 1
-                        
-                        # elif self.tribe == 'none':
-                        #     self.tribe = father.tribe
-                        #     self.allegiance = 1
-                        
-                        # elif father.tribe == 'none':
-                        #     father.tribe = self.tribe
-                        #     father.marker = f'{self.tribes[self.tribe]}M{NC}'
-                        #     father.allegiance = 1
+                        #
+                        #   COMMENT OUT THIS SECTION TO DISABLES TRIBES
+                        #
 
-                        # elif self.tribe == father.tribe:
-                        #     self.allegiance += 1
-                        #     father.allegiance += 1
+                        if not self.tribe and not father.tribe:
+                            random_tribe = choice(list(self.tribes.keys())[1:])
+                            self.tribe = random_tribe
+                            self.allegiance = 1
+                            father.tribe = random_tribe
+                            father.marker = f'{self.tribes[self.tribe]}M{NC}'
+                            father.allegiance = 1
+                        
+                        elif not self.tribe:
+                            self.tribe = father.tribe
+                            self.allegiance = 1
+                        
+                        elif not father.tribe:
+                            father.tribe = self.tribe
+                            father.marker = f'{self.tribes[self.tribe]}M{NC}'
+                            father.allegiance = 1
 
-                        # else:
-                        #     self.allegiance -= 1
-                        #     father.allegiance -= 1
+                        elif self.tribe == father.tribe:
+                            self.allegiance += 1
+                            father.allegiance += 1
+
+                        else:
+                            self.allegiance -= 1
+                            father.allegiance -= 1
                             
-                        #     if self.allegiance <= 0:
-                        #         self.tribe = 'none'
-                        #         self.allegiance = 0
+                            if self.allegiance <= 0:
+                                self.tribe = None
+                                self.allegiance = 0
 
-                        #     if father.allegiance <= 0:
-                        #         father.tribe = 'none'
-                        #         father.marker = f'{self.tribes[self.tribe]}M{NC}'
-                        #         father.allegiance = 0
+                            if father.allegiance <= 0:
+                                father.tribe = None
+                                father.marker = f'{self.tribes[self.tribe]}M{NC}'
+                                father.allegiance = 0
 
+                        #
+                        #   END OF TRIBE SECTION
+                        #
                             
                         self.child_genes = {
                             'sense': self._mix_genes(father, 'sense'),
                             'stamina': self._mix_genes(father, 'stamina'),
+                            'tribal': min(max(1, self._mix_genes(father, 'tribal')), 10),
                             'tribe': self.tribe,
-                            'allegiance': self.allegiance
+                            'allegiance': min(max(1, self.allegiance), 10)
                         }
                         self.pregnant = True
                         self.gestation = GESTATION
                         self.marker = f'{self.tribes[self.tribe]}P{NC}'
 
-        if self.home:
-            around = self._get_surroundings()
-            for n in [a[1] for a in around if a[1].__class__.__qualname__ == 'Nomad']:
-                if not n.home:
-                    n.home = self.home
-                    n.tribe = self.tribe
-                    n.allegiance = self.allegiance
-                    n.marker = f'{self.tribes[self.tribe]}M{NC}' if n.gender == 'male' else f'{self.tribes[self.tribe]}F{NC}'
 
         # movement stuff
-        #
-        # first check if the nomad has a target 
+        #   first check if the nomad has a target 
         if self.target:
             diff = (self.target[0] - self.pos[0], self.target[1] - self.pos[1])
 
             # if they next to the target
             if abs(diff[0]) + abs(diff[1]) == 1:
-                if self.goal == "go_to_hut":
-                    self.go_to_hut()
-                    if self.tribe != 'none':
-                        status['resources'] = [self.tribe, 2]
-                else:
-                    func = getattr(self, self.goal)
-                    func() # this will either be `eat()` or `drink()`
+                func = getattr(self, self.goal)
+                func() # this will either be `eat()` or `drink()`
                 
                 # get a new goal by checking if the nomad
                 # is more hungry, or more thirsty
                 self.target = None
-                if self.resources >= 2 and self.tribe != 'none':
-                    self.goal = 'go_to_hut'
-                    self.target = self.home
-                else:
-                    self.goal = max([('eat',self.hunger), ('drink',self.thirst)], key=lambda x: x[1])[0]
+                self.goal = max([('eat',self.hunger), ('drink',self.thirst)], key=lambda x: x[1])[0]
                 
             # if not next to target, keep moving
             else:
@@ -317,8 +301,6 @@ class Nomad:
                     if self._is_open((self.pos[0]+step, self.pos[1])):
                         world[self.pos[0]][self.pos[1]] = OPEN_TILE
                         self.pos = (self.pos[0]+step, self.pos[1])
-                        if world[self.pos[0]][self.pos[1]] == RESOURCE_TILE:
-                            self.resources += 1
                         world[self.pos[0]][self.pos[1]] = self
                     else:
                         self.target = None
@@ -328,8 +310,6 @@ class Nomad:
                     if self._is_open((self.pos[0], self.pos[1]+step)):
                         world[self.pos[0]][self.pos[1]] = OPEN_TILE
                         self.pos = (self.pos[0], self.pos[1]+step)
-                        if world[self.pos[0]][self.pos[1]] == RESOURCE_TILE:
-                            self.resources += 1
                         world[self.pos[0]][self.pos[1]] = self
                     else:
                         self.target = None
@@ -360,46 +340,32 @@ class Nomad:
                 if self._is_open(new_pos):
                     world[self.pos[0]][self.pos[1]] = OPEN_TILE
                     self.pos = new_pos
-                    if world[self.pos[0]][self.pos[1]] == RESOURCE_TILE:
-                        self.resources += 1
                     world[self.pos[0]][self.pos[1]] = self
                     wander = False
                 i += 1
 
+        
+        # check if there is a rebellion
+        #   the formula `y = -x + 11` ensures that when `tribal`
+        #   is at 10, there is 1% chance to rebel, while when it is at
+        #   1, there is a 10% chance of rebllion
+        if self.tribe and randint(1, 5000) <= (-self.tribal) + 11:
+            while True:
+                new_tribe = choice(list(self.tribes.keys())[1:])
+                if new_tribe != self.tribe:
+                    break
+            self.tribe = new_tribe
+            self.marker = f'{self.tribes[self.tribe]}{"M" if self.gender == "male" else "F"}{NC}'
+            self.allegiance = 10
 
         # CONSOLIDATE around = get_surroundings better
         around = self._get_surroundings()
 
-        
-
-        if self.resources >= 5:
-        
-            if not self.home:
-                
-                if OPEN_TILE in [a[1] for a in around]:
-                    open_pos = [a[0] for a in around if a[1] == OPEN_TILE][0]
-
-                    if len(tribes) < 4:
-                        
-                        while True:
-                            self.tribe = choice(list(self.tribes.keys())[1:])
-                            if self.tribe not in tribes:
-                                break
-                        self.marker = f'{self.tribes[self.tribe]}{"M" if self.gender == "male" else "F"}{NC}'
-
-                        status['tribe'] = [self.tribe, open_pos, f'{self.areas[self.tribe]}#{NC}']
-                        self.allegiance = 5
-                        self.home = open_pos
-                        self.resources -= 5
-
-            else:
-                self.allegiance -= 1
-        
-
-        if self.tribe != 'none' and self.allegiance <= 0:
-            self.home = None
-            self.tribe = 'none'
-            self.marker = f'{self.tribes[self.tribe]}{"M" if self.gender == "male" else "F"}{NC}'
+        if self.tribe and self.allegiance == 10:
+            for n in [n[1] for n in around if n[1].__class__.__qualname__ == 'Nomad']:
+                if n.tribe != self.tribe:
+                    n.hunger += 10
+                    break
                 
         # get thisty and hungry
         self.thirst += randint(0, self.fatigue)
@@ -433,7 +399,7 @@ class Nomad:
     def _is_open(self, new_pos):
         return ((new_pos[0] >= 0 and new_pos[0] < WORLD_Y) \
             and (new_pos[1] >= 0 and new_pos[1] < WORLD_X) \
-            and (world[new_pos[0]][new_pos[1]] in (OPEN_TILE, RESOURCE_TILE)))
+            and (world[new_pos[0]][new_pos[1]] == OPEN_TILE))
     
     def _is_valid(self, new_pos):
         return ((new_pos[0] >= 0 and new_pos[0] < WORLD_Y) \
@@ -444,12 +410,6 @@ class Nomad:
         return ((new_pos[0] >= 0 and new_pos[0] < WORLD_Y) \
             and (new_pos[1] >= 0 and new_pos[1] < WORLD_X) \
             and (world[new_pos[0]][new_pos[1]] == self.goals[self.goal]))
-
-    def _is_hut(self, mvmt):
-        new_pos = (self.pos[0] + mvmt[0], self.pos[1] + mvmt[1])
-        return ((new_pos[0] >= 0 and new_pos[0] < WORLD_Y) \
-            and (new_pos[1] >= 0 and new_pos[1] < WORLD_X) \
-            and (world[new_pos[0]][new_pos[1]] == f'{self.areas[self.tribe]}#{NC}'))
 
     def _get_surroundings(self):
         ret = []
@@ -471,27 +431,19 @@ class Nomad:
         world[self.target[0]][self.target[1]] = OPEN_TILE
         self.hunger = 0
 
-    def go_to_hut(self):
-        self.thirst = 0
-        self.hunger = 0
-        self.resources -= 2
-        self.allegiance += 1
-
     # useful for debugging
     def debug(self):
         o = 'Nomad:\n'
-        o += f' POS: {self.pos}'
-        o += f' THR: {self.thirst}'
-        o += f' HGR: {self.hunger}\n'
-        o += f' GOL: {self.goal}'
-        o += f' TGT: {self.target}\n'
-        o += f' SNS: {self.sense}'
-        o += f' STM: {self.stamina}'
-        o += f' LSP: {self.lifespan}'
-        o += f' RSC: {self.resources}\n'
-        o += f' TRB: {self.tribe}'
+        o += f' POS: {self.pos},'
+        o += f' THR: {self.thirst},'
+        o += f' HGR: {self.hunger},'
+        o += f' GOL: {self.goal},'
+        o += f' TGT: {self.target},'
+        o += f' SNS: {self.sense}\n'
+        o += f' STM: {self.stamina},'
+        o += f' LSP: {self.lifespan},'
+        o += f' TRB: {self.tribe},'
         o += f' ALG: {self.allegiance}'
-        o += f' HME: {self.home}'
         return o
 
     #
@@ -588,8 +540,6 @@ nomads = nomads[:NOMAD_COUNT]
 for a in nomads:
     world[a.pos[0]][a.pos[1]] = a
 
-tribes = {}
-
 
 #---------------#
 #               #
@@ -603,7 +553,7 @@ clear = lambda: system('clear')
 try:
     # file for writing simulation stats
     stats_file = open(OUTPUT_FILE, "w")
-    stats_file.write(f"time,world area,plant count,population,female population,sense,stamina,allegiance,resources\n")
+    stats_file.write(f"time,world area,plant count,population,female population,sense,stamina,allegiance,tribal\n")
 
     # continue simulation until all the nomads die,
     # or user hits Ctrl+c (see execption below)
@@ -630,9 +580,6 @@ try:
         one_dead = False
         for i,a in enumerate(nomads[:]):
 
-            # if not a.home:
-            #     a.home = (0,0)
-
             ret = a.tick(time)
             if ret['dead']:
                 if not one_dead:
@@ -641,33 +588,14 @@ try:
                     one_dead = True
 
             if ret['offspring']:
-                genes = ret['offspring']
-                new_a = Nomad(genes['pos'], time, genes['sense'], genes['stamina'], genes['tribe'], genes['allegiance'])
+                g = ret['offspring']
+                new_a = Nomad(g['pos'], time, g['sense'], g['stamina'], g['tribal'], g['tribe'], g['allegiance'])
                 nomads.append(new_a)
-                world[genes['pos'][0]][genes['pos'][1]] = new_a
-
-            elif ret['tribe']:
-                tribe_name, pos, marker = ret['tribe']
-                world[pos[0]][pos[1]] = marker
-                tribes[tribe_name] = {"base": pos, "resources": 0}
-
-            elif ret['resources']:
-                tribes[ret['resources'][0]]['resources'] += ret['resources'][1]
+                world[g['pos'][0]][g['pos'][1]] = new_a
                 
 
         # check to see if more plants will grow
         if time % PLANT_GROWTH_RATE == 0:
-
-            open_tiles = [
-                (ix,iy) for ix, row in enumerate(world)
-                for iy, i in enumerate(row) if i == OPEN_TILE]
-
-            for _ in range(RESOURCE_GROWTH_AMT):
-                try:
-                    t = choice(open_tiles)
-                    world[t[0]][t[1]] = RESOURCE_TILE
-                except:
-                    pass
 
             # check if below max pct for the plants in the world
             if plant_count / WORLD_AREA < MAX_PLANT_PCT:
@@ -695,13 +623,9 @@ try:
             output += "," + str(mean([a.sense for a in nomads]))
             output += "," + str(mean([a.stamina for a in nomads]))
             output += ',' + str(mean([a.allegiance for a in nomads]))
-            output += ',' + str(mean([a.resources for a in nomads]))
+            output += ',' + str(mean([a.tribal for a in nomads]))
             stats_file.write(f"{output}\n")
             
-        # simple output for monitoring simulation
-        # print()
-        # print(f" Time: {time},  # of Nomads: {len(nomads)}")
-
         # sleep, and increment time
         sleep(SPEED)
         time += 1
@@ -710,11 +634,11 @@ try:
 # catch Ctrl+c for early exit
 except KeyboardInterrupt:
     stats_file.close()
-    # print(world)
-    # for a in nomads:
-    #     print(a.debug())
-    for t in tribes.keys():
-        print(t, tribes[t])
+
+    if DEBUG:
+        for n in nomads:
+            print(n.debug())
+    
     print('\nthanks for playing!')
     exit(0)
 

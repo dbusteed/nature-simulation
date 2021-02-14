@@ -73,8 +73,6 @@ I've only tested this on Ubuntu Linux. I imagine this should work on MacOS becau
 
 ## TODO
 
-pre-built maps
-- river dividing stuff
 
 print less often?
 
@@ -93,27 +91,37 @@ tribes
 - benefits of tribes
   - maybe allegiance has a positve relationship with base_lifespan
 
-change 'animal' to nomad
 
-tribes base
-- add 'home' attr to animal
-- if r = 10 make house, set home to that pos
-- if stumbles into a tribe hut, set it as home
+[ ] tribe rebellions
+    - what happens when one tribe takes over?
+    - random chance?
+    - maybe if hungry / thirsty?
+      - but then they'd rebel right before dying?
+    - maybe tied to the gene for "tribal-ness"
+      - better name? "tribal"
+      - from 0 to 1, how tribal is this nomad
+      - tribal gene determines
+        - if it will engage in fights (high tribal)
+        - if it will rebel (low tribal)
 
-but what to the huts do?
+    - 0 to 1
+    - start at 0.5
+      - 50% chance will join a tribe when mating?
+      or maybe will always join a tribe when mating, but their allegiance only changes randomly
 
-rethink tribes
-[x] maybe everyone is neutral,
-[x] then someone makes a hut, 
-[x] and when that person runs into others they share deets about the hut
-[x] and they join the tribe.
-[ ] they stay around the hut to give it resources.
-[ ] external list of huts mapped to tribes for keeping track
-[ ] what if tribes go extinct?
-[ ] allegiances grow somehow?
-[ ] tribes passed thru birth
-[ ] 
+      - random chance to see if will fight others
+      - random to see if they will rebel
 
-- at some limit, won't interbreed
-- A3 B1 --> A2 B0
-- A5 A5 --> A6 A6
+      - do rebellions first!
+        - if tribal is 1, then 10% chance of leaving
+        - if tribal is 10, then 1% chance of leaving
+      
+
+    
+[ ] selective mating based on tribe
+
+[ ] tribal wars
+    - best way to "attack"?
+
+[ ] maybe allegiance drops over time, more so if low `tribal`
+    - 

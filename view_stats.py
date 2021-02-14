@@ -17,7 +17,7 @@ sns.lineplot(data=df, x="time", y="female population", linewidth=2, color="gray"
 axs[0][0].set_ylabel("Population (black)\nFemale ppl (gray)")
 
 # top right
-sns.lineplot(data=df, x="time", y="resources", linewidth=2, color="green", ax=axs[0][1])
+sns.lineplot(data=df, x="time", y="tribal", linewidth=2, color="green", ax=axs[0][1])
 # sns.lineplot(data=df, x="time", y="allegiance", linewidth=2, color="green", ax=axs[0][1])
 # sns.lineplot(data=df, x="time", y="plant count", linewidth=2, color="green", ax=axs[0][1])
 
