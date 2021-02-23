@@ -94,7 +94,7 @@ MAP_DIR = "maps"
 # generated. To specfiy other maps, set MAP to 
 # a string of a filename found in the maps directory.
 # Example: for maps/river.py, set MAP to "river"
-MAP = "river"
+MAP = "swirl"
 
 DEBUG = False
 
