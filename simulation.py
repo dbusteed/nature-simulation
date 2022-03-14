@@ -1,7 +1,5 @@
-#!/usr/bin/python3.8
-
-
-# only using standard libraries, wahoo!
+import pandas as pd
+import zmq
 from random import randint, choice, random, shuffle
 from statistics import mean
 from time import sleep
@@ -9,11 +7,8 @@ from os import system
 from sys import exit
 
 
-
 #----------------------#
-#                      #
 #   SIMULATION SETUP   #
-#                      #
 #----------------------#
 
 # colors for printing to the console.
@@ -33,8 +28,8 @@ PLANT_TILE = f'{BG_GREEN} {NC}'
 OPEN_TILE = " "
 
 # grid / world dimensions
-WORLD_X = 30
-WORLD_Y = 15
+WORLD_X = 25
+WORLD_Y = 10
 WORLD_AREA = WORLD_X * WORLD_Y
 
 # initial amount of water and plants.
@@ -69,11 +64,9 @@ PLANT_GROWTH_AMT = 3
 MAX_PLANT_PCT = .20
 
 # output stuff
-#  - name of the output file
 #  - how often data is written
-#     (lower number for more frequent writes)
+#     (lower number for more frequent updates)
 #
-OUTPUT_FILE = "stats.csv"
 OUTPUT_WRITE_INTERVAL = 20
 
 # speed of simulation
@@ -81,11 +74,16 @@ OUTPUT_WRITE_INTERVAL = 20
 SPEED = .1
 
 
+#---------------------#
+#   SETUP LIVE PLOT   #
+#---------------------#
+
+socket = zmq.Context(zmq.REP).socket(zmq.PUB)
+socket.bind("tcp://*:8899")
+
 
 #------------------#
-#                  #
 #   ANIMAL CLASS   #
-#                  #
 #------------------#
 
 class Animal:
@@ -277,7 +275,7 @@ class Animal:
     def _mix_genes(self, father, trait):
         spread = abs(getattr(self, trait) - getattr(father, trait))
         if spread == 0:
-            spread = 1
+            spread = 2
 
         value = int((getattr(self, trait) + getattr(father, trait)) / 2)
         if random() < MUTATION_CHANCE:
@@ -343,9 +341,7 @@ class Animal:
 
 
 #-------------------#
-#                   #
 #   BUILD THE MAP   #
-#                   #
 #-------------------#
 
 # create the "world" grid, and add some water tiles
@@ -415,19 +411,13 @@ for a in animals:
 
 
 #---------------#
-#               #
-#   MAIN LOOP   #
-#               #
+#   GAME LOOP   #
 #---------------#
  
 time = 0
 clear = lambda: system('clear')
 
 try:
-    # file for writing simulation stats
-    stats_file = open(OUTPUT_FILE, "w")
-    stats_file.write(f"time,world area,plant count,population,female population,sense,stamina\n")
-
     # continue simulation until all the animals die,
     # or user hits Ctrl+c (see execption below)
     while len(animals) > 0:
@@ -482,15 +472,18 @@ try:
         # write stats about the simulation to a CSV file.
         # adjust OUTPUT_WRITE_INTERVAL for different data granularity
         if time % OUTPUT_WRITE_INTERVAL == 0:
-            output = f"{time},{WORLD_AREA},{plant_count},{len(animals)}"
-            output += "," + str(len([a for a in animals if a.gender == 'female']))
-            output += "," + str(mean([a.sense for a in animals]))
-            output += "," + str(mean([a.stamina for a in animals]))
-            stats_file.write(f"{output}\n")
+            row = [
+                len(animals),
+                len([a for a in animals if a.gender == 'female']),
+                plant_count,
+                mean([a.sense for a in animals]),
+                mean([a.stamina for a in animals])
+            ]
+            socket.send_pyobj(row)
             
         # simple output for monitoring simulation
-        print()
-        print(f" Time: {time},  # of Animals: {len(animals)}")
+        # print()
+        # print(f" Time: {time},  # of Animals: {len(animals)}")
 
         # sleep, and increment time
         sleep(SPEED)
@@ -499,12 +492,10 @@ try:
 
 # catch Ctrl+c for early exit
 except KeyboardInterrupt:
-    stats_file.close()
     print('\nthanks for playing!')
     exit(0)
 
 except Exception as e:
-    stats_file.close()
     print("\nUh oh, unexpected Error!")
     print(e)
 
